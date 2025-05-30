@@ -3,16 +3,16 @@ import { Button, Text, View } from 'react-native';
 import { Drawer } from 'react-native-drawer-layout';
 
 type Props = {
+    open: boolean
+    setOpen: (open: boolean) => void
     innerComponent?: React.ReactNode;
 }
-export default function SlideOver({ innerComponent = <Text>Empty Drawer</Text> }: Props) {
-    const [open, setOpen] = React.useState(false);
+export default function SlideOver({ open, setOpen, innerComponent = <Text>Hello</Text> }: Props) {
 
     return (
         <Drawer
             open={open}
-            onOpen={() => setOpen(true)
-            }
+            onOpen={() => setOpen(true)}
             onClose={() => setOpen(false)}
             renderDrawerContent={() => innerComponent}
         >
@@ -21,4 +21,4 @@ export default function SlideOver({ innerComponent = <Text>Empty Drawer</Text> }
             </View>
         </Drawer>
     );
-}
+}   
