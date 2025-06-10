@@ -1,13 +1,17 @@
 import * as React from 'react';
-import { Button, Text, View } from 'react-native';
+import { Text } from 'react-native';
 import { Drawer } from 'react-native-drawer-layout';
 
 type Props = {
     open: boolean
     setOpen: (open: boolean) => void
     innerComponent?: React.ReactNode;
+    mainContent?: React.ReactNode;
+    drawerType?: any;
+    backTouchable?: boolean;
+    drawerStyle?: any;
 }
-export default function SlideOver({ open, setOpen, innerComponent = <Text>Hello</Text> }: Props) {
+export default function SlideOver({ open, setOpen, innerComponent = <Text>slide over content</Text>, mainContent = <Text>main content</Text>, drawerType = 'front', backTouchable = true, drawerStyle }: Props) {
 
     return (
         <Drawer
@@ -15,10 +19,11 @@ export default function SlideOver({ open, setOpen, innerComponent = <Text>Hello<
             onOpen={() => setOpen(true)}
             onClose={() => setOpen(false)}
             renderDrawerContent={() => innerComponent}
+            drawerType={drawerType}
+            overlayStyle={(backTouchable ? {} : { zIndex: -1 })}
+            drawerStyle={[drawerStyle, (backTouchable ? {} : { borderColor: '#cccccc', borderRightWidth: 1 })]}
         >
-            <View>
-                <Button title="Open Drawer" onPress={() => setOpen(true)} />
-            </View>
+            {mainContent}
         </Drawer>
     );
-}   
+}
