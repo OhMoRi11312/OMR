@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from 'react-native-vector-icons/MaterialCommunityIcons'
 import { DocumentDirectoryPath } from '@dr.pogodin/react-native-fs';
 import { useRef, useState } from 'react';
 import { Button, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -56,6 +56,8 @@ export default function App() {
         <View style={styles.pageMain} >
             <View style={styles.toolbarSection}>
                 <View style={styles.tabGroup}>
+                    <Btn onPress={() => ref.current?.showToolPicker()} text="도구 보이기" />
+                    <Btn onPress={() => ref.current?.hideToolPicker()} text="도구 숨기기" />
                     <Btn onPress={() => ref.current?.clear()} text="모두 지우기" />
                     <Btn onPress={() => ref.current?.undo()} text="실행 취소" />
                     <Btn onPress={() => ref.current?.redo()} text="다시 실행" />
