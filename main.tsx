@@ -1,13 +1,31 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { DocumentDirectoryPath } from '@dr.pogodin/react-native-fs';
 import { useRef, useState } from 'react';
-import { Button, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import PencilKitView, { type PencilKitRef, type PencilKitTool, } from 'react-native-pencil-kit';
-import OMR from '../components/OMR';
-import SlideOver from '../components/SlideOverPanel';
+import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import 'react-native-gesture-handler';
 import { ScrollView } from 'react-native-gesture-handler';
+import PencilKitView, { type PencilKitRef, type PencilKitTool, } from 'react-native-pencil-kit';
+import { MaterialCommunityIcons } from 'react-native-vector-icons/MaterialCommunityIcons';
 import ConfirmDialog from '../components/ConfirmDialog';
+import OMR from '../components/OMR';
+import SlideOver from '../components/SlideOverPanel';
+
+
+const allPens: { label: string; value: string; icon: string; }[] = [
+    { label: '펜', value: 'pen', icon: 'pen' },
+    { label: '연필', value: 'pencil', icon: 'pencil-outline' },
+    { label: '마커', value: 'marker', icon: 'format-color-highlight' },
+    { label: '크레용', value: 'crayon', icon: 'border-color' },
+    { label: '모노라인', value: 'monoline', icon: 'vector-line' },
+    { label: '수채화', value: 'watercolor', icon: 'brush' },
+    { label: '붓펜', value: 'fountainPen', icon: 'fountain-pen-tip' },
+];
+
+const allErasers: { label: string; value: string; icon: string; }[] = [
+    { label: '비트맵 지우개', value: 'eraserBitmap', icon: '' },
+    { label: '벡터 지우개', value: 'eraserVector', icon: '' },
+    { label: '고정폭 지우개', value: 'eraserFixedWidthBitmap', icon: '' },
+];
+
 
 export default function App() {
     const ref = useRef<PencilKitRef>(null);
@@ -54,6 +72,8 @@ export default function App() {
         <View style={styles.pageMain} >
             <View style={styles.toolbarSection}>
                 <View style={styles.tabGroup}>
+                    <Btn onPress={() => ref.current?.showToolPicker()} text="도구 보이기" />
+                    <Btn onPress={() => ref.current?.hideToolPicker()} text="도구 숨기기" />
                     <Btn onPress={() => ref.current?.clear()} text="모두 지우기" />
                     <Btn onPress={() => ref.current?.undo()} text="실행 취소" />
                     <Btn onPress={() => ref.current?.redo()} text="다시 실행" />
