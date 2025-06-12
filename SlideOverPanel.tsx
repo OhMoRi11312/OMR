@@ -21,7 +21,7 @@ export default function SlideOver({ open, setOpen, innerComponent = <Text>slide 
             renderDrawerContent={() => innerComponent}
             drawerType={drawerType}
             overlayStyle={(backTouchable ? {} : { zIndex: -1 })}
-            drawerStyle={[drawerStyle, (backTouchable ? {} : { borderColor: '#cccccc', borderRightWidth: 1 })]}
+            drawerStyle={[drawerStyle, (backTouchable ? {} : { borderColor: '#cccccc', borderRightWidth: 1, borderTopRightRadius: 25, borderBottomRightRadius: 25, })]}
         >
             {mainContent}
         </Drawer>
