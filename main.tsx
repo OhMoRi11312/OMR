@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from 'react-native-vector-icons/MaterialCommunityIcons'
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { DocumentDirectoryPath } from '@dr.pogodin/react-native-fs';
 import { useRef, useState } from 'react';
 import { Button, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -7,23 +7,7 @@ import OMR from '../components/OMR';
 import SlideOver from '../components/SlideOverPanel';
 import 'react-native-gesture-handler';
 import { ScrollView } from 'react-native-gesture-handler';
-
-const allPens: { label: string; value: string; icon: string; }[] = [
-    { label: '펜', value: 'pen', icon: 'pen' },
-    { label: '연필', value: 'pencil', icon: 'pencil-outline' },
-    { label: '마커', value: 'marker', icon: 'format-color-highlight' },
-    { label: '크레용', value: 'crayon', icon: 'border-color' },
-    { label: '모노라인', value: 'monoline', icon: 'vector-line' },
-    { label: '수채화', value: 'watercolor', icon: 'brush' },
-    { label: '붓펜', value: 'fountainPen', icon: 'fountain-pen-tip' },
-];
-
-const allErasers: { label: string; value: string; icon: string; }[] = [
-    { label: '비트맵 지우개', value: 'eraserBitmap', icon: '' },
-    { label: '벡터 지우개', value: 'eraserVector', icon: '' },
-    { label: '고정폭 지우개', value: 'eraserFixedWidthBitmap', icon: '' },
-];
-
+import ConfirmDialog from '../components/ConfirmDialog';
 
 export default function App() {
     const ref = useRef<PencilKitRef>(null);
@@ -33,31 +17,43 @@ export default function App() {
     const [currentTool, setCurrentTool] = useState<PencilKitTool | null>(null);
     const [selectedAnswers, setSelectedAnswers] = useState<{ [key: number]: string[] }>({});
     const [isDrawerOpen, setDrawerOpen] = useState(false);
-    const [drawerType, setDrawerType] = useState<'front' | 'slide'>('front');
+    const [drawerType, setDrawerType] = useState<'front' | 'slide'>('front')
+    const [showConfirm, setShowConfirm] = useState(false);
+    const [dialogMessage, setDialogMessage] = useState('');
+    const [functionToDo, setFunctionToDo] = useState<() => void>(() => () => { });
 
-    function handleSubmit() {
-        console.log('선택된 답안:', selectedAnswers);
+    function showDialog(message: string, action: () => void) {
+        setDialogMessage(message);
+        setFunctionToDo(() => action); // 콜백 저장
+        setShowConfirm(true);
+    }
 
-        const answerKey = { 0: ['3'], 1: ['2'] };
+    function handleGrading() {
+
+        const answerKey = {
+            0: ['3'],
+            1: ['2'],
+            // ...
+        }
+
         let correct = 0;
-
         Object.entries(answerKey).forEach(([qIndex, correctAnswer]) => {
-            const selected = selectedAnswers[+qIndex] || [];
+            const selected = selectedAnswers[+qIndex] || []
             if (
                 correctAnswer.length === selected.length &&
                 correctAnswer.every((val, i) => selected[i] === val)
             ) {
-                correct += 1;
+                correct += 1
             }
-        });
+        })
+
+        alert(`정답 수: ${correct}개`)
     }
 
     return (
         <View style={styles.pageMain} >
             <View style={styles.toolbarSection}>
                 <View style={styles.tabGroup}>
-                    <Btn onPress={() => ref.current?.showToolPicker()} text="도구 보이기" />
-                    <Btn onPress={() => ref.current?.hideToolPicker()} text="도구 숨기기" />
                     <Btn onPress={() => ref.current?.clear()} text="모두 지우기" />
                     <Btn onPress={() => ref.current?.undo()} text="실행 취소" />
                     <Btn onPress={() => ref.current?.redo()} text="다시 실행" />
@@ -97,24 +93,36 @@ export default function App() {
                 open={isDrawerOpen}
                 setOpen={setDrawerOpen}
                 innerComponent={
-                    <View style={{ flex: 1 }}>
+                    <View style={{ width: '100%', height: '100%', borderTopRightRadius: 25, borderBottomRightRadius: 25, }}>
                         <TouchableOpacity
                             onPress={() => {
                                 setDrawerType(prev => prev === 'front' ? 'slide' : 'front')
                             }}
+                            style={{ width: 24, height: 24, flexDirection: 'row', }}
                         >
-                            <MaterialCommunityIcons name={drawerType === 'slide' ? 'view-column' : 'dock-right'} size={24} color="blurgb(0, 122, 255)" />
+                            <MaterialCommunityIcons name={drawerType === 'slide' ? 'view-column' : 'dock-right'} size={24} color="#007AFF" />
                         </TouchableOpacity>
 
                         <ScrollView>
                             <OMR
                                 numQuestions={10}
                                 optionsPerQuestion={['1', '2', '3', '4', '5']}
-                                selectedAnswers={[]}
-                                setSelectedAnswers={() => { }}
+                                selectedAnswers={selectedAnswers}
+                                setSelectedAnswers={setSelectedAnswers}
                             />
-                            <Button title="제출 및 채점" onPress={() => { }} />
                         </ScrollView>
+                        <TouchableOpacity
+                            onPress={() => showDialog("OMR을 교체합니다.", () => { setSelectedAnswers([]) })}
+                            style={{ padding: 5, width: 225 }}
+                        >
+                            <Text style={{ color: '#007AFF', textAlign: 'center' }}>OMR 교체</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => showDialog("채점을 진행 합니다.", handleGrading)}
+                            style={{ padding: 5, width: 225 }}
+                        >
+                            <Text style={{ color: '#007AFF', textAlign: 'center' }}>제출 및 채점</Text>
+                        </TouchableOpacity>
                     </View>
                 }
                 mainContent={
@@ -135,6 +143,15 @@ export default function App() {
                             ) : null}
                     </View>
                 }
+            />
+            <ConfirmDialog
+                visible={showConfirm}
+                message={dialogMessage}
+                onCancel={() => setShowConfirm(false)}
+                onConfirm={() => {
+                    setShowConfirm(false);
+                    functionToDo(); // 선택된 작업 실행
+                }}
             />
         </View>
     )
@@ -278,5 +295,10 @@ const styles = StyleSheet.create({
         backgroundColor: 'white',
         width: 160,
         height: 160,
+    },
+
+    slideoverPanel: {
+        flexDirection: 'column',
+        width: 250,
     },
 });
