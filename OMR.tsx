@@ -51,7 +51,7 @@ const OMR: React.FC<OMRProps> = ({
                                     style={styles.shortInput}
                                     keyboardType="number-pad"
                                     value={typeof currentAnswer === 'string' ? currentAnswer : ''}
-                                    onChangeText={text => handleShortInput(number, text, digit)}
+                                    onChangeText={text => handleShortInput(number, text, 3)}
                                 />
                             ) : (
                                 Array.from({ length: options }).map((_, i) => {
