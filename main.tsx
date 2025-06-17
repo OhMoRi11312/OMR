@@ -1,10 +1,10 @@
 import { DocumentDirectoryPath } from '@dr.pogodin/react-native-fs';
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState } from 'react';
 import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import 'react-native-gesture-handler';
 import { ScrollView } from 'react-native-gesture-handler';
 import PencilKitView, { type PencilKitRef, type PencilKitTool, } from 'react-native-pencil-kit';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { MaterialCommunityIcons } from 'react-native-vector-icons/MaterialCommunityIcons';
 import ConfirmDialog from '../components/ConfirmDialog';
 import OMR from '../components/OMR';
 import SlideOver from '../components/SlideOverPanel';
@@ -38,109 +38,51 @@ export default function App() {
     const [showConfirm, setShowConfirm] = useState(false);
     const [dialogMessage, setDialogMessage] = useState('');
     const [functionToDo, setFunctionToDo] = useState<() => void>(() => () => { });
-    const [answers, setAnswers] = useState<{ [key: number]: string }>({});
 
-    useEffect(() => {
-        const raw = `
-      1 ②
-      6 ③
-      2 ④
-      7 ②
-      3 ④
-      8 ⑤
-      4 ②
-      9 ①
-      5 ③
-      10 ⑤
-      11 ④
-      16 ①
-      21 ①
-      26 ①
-      31 ①
-      12 ⑤
-      17 ⑤
-      22 ①
-      27 ④
-      32 ①
-      13 ③
-      18 ④
-      23 ③
-      28 ①
-      33 ⑤
-      14 ②
-      19 ②
-      24 ④
-      29 ①
-      34 ②
-      15 ①
-      20 ⑤
-      25 ⑤
-      30 ④
-    `;
-        const choiceMap: Record<string, string> = {
-            '①': '1',
-            '②': '2',
-            '③': '3',
-            '④': '4',
-            '⑤': '5',
-        };
-
-        const parsed: { [key: number]: string } = {};
-        const regex = /(\d+)\s([①-⑤])/g;
-        let match;
-
-        while ((match = regex.exec(raw)) !== null) {
-            const number = parseInt(match[1], 10);
-            const answer = choiceMap[match[2]]; // 숫자로 변환
-            parsed[number] = answer;
-        }
-
-
-        console.log(parsed)
-        setAnswers(parsed);
-    }, []);
     function showDialog(message: string, action: () => void) {
         setDialogMessage(message);
-        setFunctionToDo(() => action); // 콜백 저장
+        setFunctionToDo(() => action);
         setShowConfirm(true);
     }
 
     function handleGrading() {
-        const answerKey = answers;
+
+        const answerKey = {
+            0: ['3'],
+            1: ['2'],
+            // ...
+        }
+
         let correct = 0;
-
         Object.entries(answerKey).forEach(([qIndex, correctAnswer]) => {
-            const selected = selectedAnswers[+qIndex - 1] || [];
-            console.log(`문항 ${qIndex}: 정답=${correctAnswer}, 선택=${selected}`);
-
+            const selected = selectedAnswers[+qIndex] || []
             if (
-                selected.length === 1 &&
-                selected[0] === correctAnswer
+                correctAnswer.length === selected.length &&
+                correctAnswer.every((val, i) => selected[i] === val)
             ) {
-                correct += 1;
+                correct += 1
             }
-        });
+        })
 
-        alert(`정답 수: ${correct}개`);
+        alert(`정답 수: ${correct}개`)
     }
 
     return (
         <View style={styles.pageMain} >
             <View style={styles.toolbarSection}>
-                <View style={styles.tabGroup}>
-                    <Btn onPress={() => ref.current?.showToolPicker()} text="도구 보이기" />
-                    <Btn onPress={() => ref.current?.hideToolPicker()} text="도구 숨기기" />
-                    <Btn onPress={() => ref.current?.clear()} text="모두 지우기" />
-                    <Btn onPress={() => ref.current?.undo()} text="실행 취소" />
-                    <Btn onPress={() => ref.current?.redo()} text="다시 실행" />
+                <View style={styles.tbGroup1}>
+                    <View style={styles.tbGrooup1Child}>
+                        <Btn onPress={() => ref.current?.showToolPicker()} text="도구 보이기" />
+                        <Btn onPress={() => ref.current?.hideToolPicker()} text="도구 숨기기" />
+                        <Btn onPress={() => ref.current?.clear()} text="모두 지우기" />
+                        <Btn onPress={() => ref.current?.undo()} text="실행 취소" />
+                        <Btn onPress={() => ref.current?.redo()} text="다시 실행" />
+                    </View>
+                    <View style={styles.tbGrooup1Child}>
+                    </View>
                 </View>
-                <View style={styles.toolGroup} >
+                <View style={styles.tbGroup2} >
                     <View style={styles.functionToolGroup}>
-                        <Btn
-                            text={isDrawerOpen ? 'OMR 닫기' : 'OMR 열기'}
-                            onPress={() => setDrawerOpen(!isDrawerOpen)}
-                            variant={2}
-                        />
                     </View>
                     <View style={styles.drawingToolGroup}>
                         <ToolButtons
@@ -159,6 +101,12 @@ export default function App() {
                                 setCurrentTool(tool);
                             }}
                         />
+
+                        <Btn
+                            text={isDrawerOpen ? 'OMR 닫기' : 'OMR 열기'}
+                            onPress={() => setDrawerOpen(!isDrawerOpen)}
+                            variant={2}
+                        />
                     </View>
                 </View>
                 {/* </ScrollView> */}
@@ -168,22 +116,20 @@ export default function App() {
                 backTouchable={false}
                 open={isDrawerOpen}
                 setOpen={setDrawerOpen}
-                drawerStyle={styles.slideoverPanel}
-                drawerPosition={'right'}
                 innerComponent={
                     <View style={{ width: '100%', height: '100%', borderTopRightRadius: 25, borderBottomRightRadius: 25, }}>
                         <TouchableOpacity
                             onPress={() => {
                                 setDrawerType(prev => prev === 'front' ? 'slide' : 'front')
                             }}
-                            style={{ width: 24, height: 24, flexDirection: 'row', alignSelf: 'flex-end', marginRight: 10, }}
+                            style={{ width: 24, height: 24, flexDirection: 'row', }}
                         >
                             <MaterialCommunityIcons name={drawerType === 'slide' ? 'view-column' : 'dock-right'} size={24} color="#007AFF" />
                         </TouchableOpacity>
 
                         <ScrollView>
                             <OMR
-                                numQuestions={Object.keys(answers).length}
+                                numQuestions={10}
                                 optionsPerQuestion={['1', '2', '3', '4', '5']}
                                 selectedAnswers={selectedAnswers}
                                 setSelectedAnswers={setSelectedAnswers}
@@ -231,7 +177,7 @@ export default function App() {
                     functionToDo(); // 선택된 작업 실행
                 }}
             />
-        </View>
+        </View >
     )
 }
 
@@ -308,12 +254,14 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFE560',
         paddingTop: Platform.OS === 'ios' ? 24 : 0,
     },
-    tabGroup: {
+    tbGroup1: {
         flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'baseline',
         width: '100%',
-        height: 48
+        height: 48,
     },
-    toolGroup: {
+    tbGroup2: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         width: '100%',
@@ -321,6 +269,10 @@ const styles = StyleSheet.create({
         paddingHorizontal: 8,
         backgroundColor: '#FFF1A8',
     },
+    tbGrooup1Child: {
+        flexDirection: 'row',
+    },
+
     functionToolGroup: {
         flexDirection: 'row',
         justifyContent: 'flex-start',
