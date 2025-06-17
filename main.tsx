@@ -1,5 +1,5 @@
 import { DocumentDirectoryPath } from '@dr.pogodin/react-native-fs';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import 'react-native-gesture-handler';
 import { ScrollView } from 'react-native-gesture-handler';
@@ -120,7 +120,7 @@ export default function App() {
             else if (questionType === 'short') {
                 if (typeof selected === 'string' && selected.trim() !== '') {
                     graded_count++;
-                    if (selected === correctAnswer) {
+                    if (parseInt(selected) === parseInt(correctAnswer)) {
                         correctCount++;
                     }
                 }
