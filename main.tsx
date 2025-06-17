@@ -1,6 +1,6 @@
 import { DocumentDirectoryPath } from '@dr.pogodin/react-native-fs';
-import { useRef, useState, useEffect } from 'react';
-import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import 'react-native-gesture-handler';
 import { ScrollView } from 'react-native-gesture-handler';
 import PencilKitView, { type PencilKitRef, type PencilKitTool, } from 'react-native-pencil-kit';
@@ -17,13 +17,10 @@ const allPens: { label: string; value: string; icon: string; }[] = [
     { label: '모노라인', value: 'monoline', icon: 'vector-line' },
     { label: '수채화', value: 'watercolor', icon: 'brush' },
     { label: '붓펜', value: 'fountainPen', icon: 'fountain-pen-tip' },
+    { label: '비트맵 지우개', value: 'eraserBitmap', icon: 'eraser' },
+    { label: '벡터 지우개', value: 'eraserVector', icon: 'eraser-variant' },
 ];
 
-const allErasers: { label: string; value: string; icon: string; }[] = [
-    { label: '비트맵 지우개', value: 'eraserBitmap', icon: '' },
-    { label: '벡터 지우개', value: 'eraserVector', icon: '' },
-    { label: '고정폭 지우개', value: 'eraserFixedWidthBitmap', icon: '' },
-];
 
 
 export default function App() {
@@ -32,52 +29,42 @@ export default function App() {
     const [imageBase64, setImageBase64] = useState('');
     const [toolColors, setToolColors] = useState<Record<PencilKitTool, string>>({});
     const [currentTool, setCurrentTool] = useState<PencilKitTool | null>(null);
-    const [selectedAnswers, setSelectedAnswers] = useState<{ [key: number]: string[] }>({});
+    const [selectedAnswers, setSelectedAnswers] = useState<{ [key: number]: string[] | string }>({});
     const [isDrawerOpen, setDrawerOpen] = useState(false);
+    const [isMemoOn, setMemoStatus] = useState(false);
     const [drawerType, setDrawerType] = useState<'front' | 'slide'>('front')
     const [showConfirm, setShowConfirm] = useState(false);
     const [dialogMessage, setDialogMessage] = useState('');
-    const [functionToDo, setFunctionToDo] = useState<() => void>(() => () => { });
-    const [answers, setAnswers] = useState<{ [key: number]: string }>({});
+    const [functionToDo, setFunctionToDo] = useState<() => void>(() => { });
+    const [questions, setQuestions] = useState<{ [key: number]: { answer: string; type: string } }>({});
+
 
     useEffect(() => {
         const raw = `
       1 ②
-      6 ③
-      2 ④
-      7 ②
-      3 ④
+      2 ①
+      3 ③
+      4 ③
+      5 ②
+      6 ④
+      7 ⑤
       8 ⑤
-      4 ②
-      9 ①
-      5 ③
-      10 ⑤
-      11 ④
-      16 ①
-      21 ①
-      26 ①
-      31 ①
-      12 ⑤
-      17 ⑤
-      22 ①
-      27 ④
-      32 ①
-      13 ③
-      18 ④
-      23 ③
-      28 ①
-      33 ⑤
+      9 ②
+      10 ①
+      11 ⑤
+      12 ②
+      13 ④
       14 ②
-      19 ②
-      24 ④
-      29 ①
-      34 ②
       15 ①
-      20 ⑤
-      25 ⑤
-      30 ④
+      16 2
+      17 6
+      18 133
+      19 8
+      20 85
+      21 42
+      22 38
     `;
-        const choiceMap: Record<string, string> = {
+        const choiceMap = {
             '①': '1',
             '②': '2',
             '③': '3',
@@ -85,20 +72,27 @@ export default function App() {
             '⑤': '5',
         };
 
-        const parsed: { [key: number]: string } = {};
-        const regex = /(\d+)\s([①-⑤])/g;
-        let match;
+        const parsed: { [key: number]: { answer: string, type: '' | 'selone' | 'short' } } = {};
+        const lines = raw.trim().split('\n');   // 행 별로 정답 추출
 
-        while ((match = regex.exec(raw)) !== null) {
-            const number = parseInt(match[1], 10);
-            const answer = choiceMap[match[2]]; // 숫자로 변환
-            parsed[number] = answer;
-        }
+        lines.forEach(line => {
+            const [number, string] = line.trim().split(/\s+/);
+            const qNum = parseInt(number, 10);
+            parsed[qNum] = { answer: '', type: '' };
 
-
+            // 객관식 심볼인지 체크
+            if (string && string.length === 1 && Object.keys(choiceMap).includes(string)) {
+                parsed[qNum].answer = choiceMap[string];
+                parsed[qNum].type = 'selone';
+            } else {
+                parsed[qNum].answer = string;
+                parsed[qNum].type = 'short'
+            }
+        });
         console.log(parsed)
-        setAnswers(parsed);
+        setQuestions(parsed);
     }, []);
+
     function showDialog(message: string, action: () => void) {
         setDialogMessage(message);
         setFunctionToDo(() => action); // 콜백 저장
@@ -106,23 +100,39 @@ export default function App() {
     }
 
     function handleGrading() {
-        const answerKey = answers;
-        let correct = 0;
+        let correctCount = 0;
+        let questionsLength = Object.keys(questions).length;
+        let graded_count = 0;
 
-        Object.entries(answerKey).forEach(([qIndex, correctAnswer]) => {
-            const selected = selectedAnswers[+qIndex - 1] || [];
-            console.log(`문항 ${qIndex}: 정답=${correctAnswer}, 선택=${selected}`);
+        for (const [qNumStr, selected] of Object.entries(selectedAnswers)) {
+            const qNum = parseInt(qNumStr, 10);
+            const correctAnswer = questions[qNum]?.answer;
+            const questionType = questions[qNum]?.type;
 
-            if (
-                selected.length === 1 &&
-                selected[0] === correctAnswer
-            ) {
-                correct += 1;
+            if (questionType === 'selone') {
+                if (Array.isArray(selected) && selected.length === 1) {
+                    graded_count++;
+                    if (selected[0] === correctAnswer) {
+                        correctCount++;
+                    }
+                }
             }
-        });
+            else if (questionType === 'short') {
+                if (typeof selected === 'string' && selected.trim() !== '') {
+                    graded_count++;
+                    if (selected === correctAnswer) {
+                        correctCount++;
+                    }
+                }
+            }
+        }
 
-        alert(`정답 수: ${correct}개`);
+        const wrongCount = graded_count - correctCount;
+        const ungradedCount = questionsLength - graded_count;
+
+        alert(`총 문항 수: ${questionsLength}\n정답: ${correctCount}개\n오답: ${wrongCount}개\n무표기: ${ungradedCount}개`);
     }
+
 
     return (
         <View style={styles.pageMain} >
@@ -136,6 +146,7 @@ export default function App() {
                         <Btn onPress={() => ref.current?.redo()} text="다시 실행" />
                     </View>
                     <View style={styles.tbGrooup1Child}>
+                        {/* <TimerMini /> */}
                     </View>
                 </View>
                 <View style={styles.tbGroup2} >
@@ -151,16 +162,16 @@ export default function App() {
                             }}
                         />
                     </View>
-                    <View style={styles.eraserToolGroup}>
-                        <ToolButtons
-                            tools={allErasers}
-                            onSelect={(tool) => {
-                                ref.current?.setTool({ toolType: tool, width: 4, color: 'black' });
-                                setCurrentTool(tool);
-                            }}
+                    <View style={styles.optionBtnGroup}>
+                        <Btn
+                            text={isMemoOn ? '메모 끄기' : '메모 켜기'}
+                            on={isMemoOn}
+                            onPress={() => setMemoStatus(!isMemoOn)}
+                            variant={2}
                         />
                         <Btn
                             text={isDrawerOpen ? 'OMR 닫기' : 'OMR 열기'}
+                            on={isDrawerOpen}
                             onPress={() => setDrawerOpen(!isDrawerOpen)}
                             variant={2}
                         />
@@ -188,8 +199,7 @@ export default function App() {
 
                         <ScrollView>
                             <OMR
-                                numQuestions={Object.keys(answers).length}
-                                optionsPerQuestion={['1', '2', '3', '4', '5']}
+                                questions={questions}
                                 selectedAnswers={selectedAnswers}
                                 setSelectedAnswers={setSelectedAnswers}
                             />
@@ -245,11 +255,13 @@ const Btn = ({
     text,
     variant = 1,
     icon = 'face-man',
+    on = true,
 }: {
     onPress: () => void;
     text: string;
     variant?: number;
     icon?: any;
+    on?: boolean;
 }) => {
     let output;
     if (icon === '' || !icon) {
@@ -272,8 +284,8 @@ const Btn = ({
             break;
         default:
             output = (
-                <TouchableOpacity onPress={onPress} style={[styles.defaultButton, { borderColor: '#000000', borderStyle: 'solid', borderWidth: 1, borderRadius: 12, }]} >
-                    <Text style={[styles.defaultButton]}> {text} </Text>
+                <TouchableOpacity onPress={onPress} style={[styles.defaultButton, (on === false ? styles.ButtonOFF : styles.ButtonON), { borderColor: '#000000', borderStyle: 'solid', borderWidth: 1, borderRadius: 12, }]} >
+                    <Text style={[(on === false ? styles.ButtonOFF : styles.ButtonON), styles.defaultButton]}> {text} </Text>
                 </TouchableOpacity>
             )
     }
@@ -297,99 +309,106 @@ const ToolButtons = ({
 
 // Styles
 const styles = StyleSheet.create({
-  pageMain: {
-    flex: 1,
-    width: '100%',
-  },
-  container: {
-    flex: 1,
-    width: '100%',
-  },
-  toolbarSection: {
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: 8,
-    width: '100%',
-    backgroundColor: '#FFE560',
-    paddingTop: Platform.OS === 'ios' ? 24 : 0,
-  },
-  tbGroup1: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-    width: '100%',
-    height: 48,
-  },
-  tbGroup2: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    height: 40,
-    paddingHorizontal: 8,
-    backgroundColor: '#FFF1A8',
-  },
-  tbGrooup1Child: {
-    flexDirection: 'row',
-  },
+    pageMain: {
+        flex: 1,
+        width: '100%',
+    },
+    container: {
+        flex: 1,
+        width: '100%',
+    },
+    toolbarSection: {
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 8,
+        width: '100%',
+        backgroundColor: '#FFE560',
+        paddingTop: Platform.OS === 'ios' ? 24 : 0,
+    },
+    tbGroup1: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'baseline',
+        width: '100%',
+        height: 29,
+    },
+    tbGroup2: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        width: '100%',
+        height: 40,
+        paddingHorizontal: 8,
+        backgroundColor: '#FFF1A8',
+    },
+    tbGrooup1Child: {
+        flexDirection: 'row',
+    },
 
-  functionToolGroup: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-    alignItems: 'center',
-    gap: 6,
-    flex: 1
-  },
-  drawingToolGroup: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 0,
-    flex: 1
-  },
-  eraserToolGroup: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    gap: 6,
-    flex: 1
-  },
+    functionToolGroup: {
+        flexDirection: 'row',
+        justifyContent: 'flex-start',
+        alignItems: 'center',
+        gap: 6,
+        flex: 1
+    },
+    drawingToolGroup: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 0,
+        flex: 1
+    },
+    optionBtnGroup: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+        gap: 15,
+        flex: 1
+    },
 
-  button: {
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 4,
-  },
-  defaultButton: {
-    backgroundColor: '#000000',
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    color: '#ffffff',
-  },
+    button: {
+        paddingVertical: 6,
+        paddingHorizontal: 10,
+        borderRadius: 4,
+    },
+    defaultButton: {
+        paddingHorizontal: 6,
+        paddingVertical: 3,
+    },
+    ButtonOFF: {
+        backgroundColor: 'transparent',
+        color: '#000000',
+        borderColor: '#000000',
+    },
+    ButtonON: {
+        backgroundColor: '#000000',
+        color: '#ffffff',
+        borderColor: '#000000',
+    },
 
+    canvasWrapper: {
+        flex: 1,
+        backgroundColor: '#ffffff',
+    },
+    canvas: {
+        flex: 1,
+    },
+    previewImage: {
+        borderWidth: 1,
+        borderColor: '#2224',
+        borderRadius: 12,
+        position: 'absolute',
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'white',
+        width: 160,
+        height: 160,
+    },
 
-  canvasWrapper: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-  },
-  canvas: {
-    flex: 1,
-  },
-  previewImage: {
-    borderWidth: 1,
-    borderColor: '#2224',
-    borderRadius: 12,
-    position: 'absolute',
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'white',
-    width: 160,
-    height: 160,
-  },
-
-  slideoverPanel: {
-    flexDirection: 'column',
-    width: 250,
-    borderLeftWidth: 1,
-    borderTopLeftRadius: 25, borderBottomLeftRadius: 25,
-  },
+    slideoverPanel: {
+        flexDirection: 'column',
+        width: 250,
+        borderLeftWidth: 1,
+        borderTopLeftRadius: 25, borderBottomLeftRadius: 25,
+    },
 });
