@@ -4,7 +4,7 @@ import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react
 import 'react-native-gesture-handler';
 import { ScrollView } from 'react-native-gesture-handler';
 import PencilKitView, { type PencilKitRef, type PencilKitTool, } from 'react-native-pencil-kit';
-import { MaterialCommunityIcons } from 'react-native-vector-icons/MaterialCommunityIcons';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import ConfirmDialog from '../components/ConfirmDialog';
 import OMR from '../components/OMR';
 import SlideOver from '../components/SlideOverPanel';
@@ -20,18 +20,10 @@ const allPens: { label: string; value: string; icon: string; }[] = [
 ];
 
 const allErasers: { label: string; value: string; icon: string; }[] = [
-    { label: '정밀 지우개', value: 'eraserBitmap', icon: '' },
-    { label: '도형 지우개', value: 'eraserVector', icon: '' },
+    { label: '비트맵 지우개', value: 'eraserBitmap', icon: '' },
+    { label: '벡터 지우개', value: 'eraserVector', icon: '' },
     { label: '고정폭 지우개', value: 'eraserFixedWidthBitmap', icon: '' },
 ];
-
-const choiceMap: Record<string, string> = {
-    '①': '1',
-    '②': '2',
-    '③': '3',
-    '④': '4',
-    '⑤': '5',
-};
 
 
 export default function App() {
@@ -46,47 +38,55 @@ export default function App() {
     const [showConfirm, setShowConfirm] = useState(false);
     const [dialogMessage, setDialogMessage] = useState('');
     const [functionToDo, setFunctionToDo] = useState<() => void>(() => () => { });
+    const [answers, setAnswers] = useState<{ [key: number]: string }>({});
 
     useEffect(() => {
         const raw = `
-          1 ②
-          6 ③
-          2 ④
-          7 ②
-          3 ④
-          8 ⑤
-          4 ②
-          9 ①
-          5 ③
-          10 ⑤
-          11 ④
-          16 ①
-          21 ①
-          26 ①
-          31 ①
-          12 ⑤
-          17 ⑤
-          22 ①
-          27 ④
-          32 ①
-          13 ③
-          18 ④
-          23 ③
-          28 ①
-          33 ⑤
-          14 ②
-          19 ②
-          24 ④
-          29 ①
-          34 ②
-          15 ①
-          20 ⑤
-          25 ⑤
-          30 ④
-        `;
+      1 ②
+      6 ③
+      2 ④
+      7 ②
+      3 ④
+      8 ⑤
+      4 ②
+      9 ①
+      5 ③
+      10 ⑤
+      11 ④
+      16 ①
+      21 ①
+      26 ①
+      31 ①
+      12 ⑤
+      17 ⑤
+      22 ①
+      27 ④
+      32 ①
+      13 ③
+      18 ④
+      23 ③
+      28 ①
+      33 ⑤
+      14 ②
+      19 ②
+      24 ④
+      29 ①
+      34 ②
+      15 ①
+      20 ⑤
+      25 ⑤
+      30 ④
+    `;
+        const choiceMap: Record<string, string> = {
+            '①': '1',
+            '②': '2',
+            '③': '3',
+            '④': '4',
+            '⑤': '5',
+        };
 
         const parsed: { [key: number]: string } = {};
-        const regex = /(\d+)\s([①-⑤])/g;  // 정규식 -> 
+        const regex = /(\d+)\s([①-⑤])/g;
         let match;
 
         while ((match = regex.exec(raw)) !== null) {
@@ -99,10 +99,9 @@ export default function App() {
         console.log(parsed)
         setAnswers(parsed);
     }, []);
-
     function showDialog(message: string, action: () => void) {
         setDialogMessage(message);
-        setFunctionToDo(() => action);
+        setFunctionToDo(() => action); // 콜백 저장
         setShowConfirm(true);
     }
 
@@ -141,6 +140,7 @@ export default function App() {
                 </View>
                 <View style={styles.tbGroup2} >
                     <View style={styles.functionToolGroup}>
+
                     </View>
                     <View style={styles.drawingToolGroup}>
                         <ToolButtons
@@ -159,7 +159,6 @@ export default function App() {
                                 setCurrentTool(tool);
                             }}
                         />
-
                         <Btn
                             text={isDrawerOpen ? 'OMR 닫기' : 'OMR 열기'}
                             onPress={() => setDrawerOpen(!isDrawerOpen)}
@@ -174,20 +173,22 @@ export default function App() {
                 backTouchable={false}
                 open={isDrawerOpen}
                 setOpen={setDrawerOpen}
+                drawerStyle={styles.slideoverPanel}
+                drawerPosition={'right'}
                 innerComponent={
                     <View style={{ width: '100%', height: '100%', borderTopRightRadius: 25, borderBottomRightRadius: 25, }}>
                         <TouchableOpacity
                             onPress={() => {
                                 setDrawerType(prev => prev === 'front' ? 'slide' : 'front')
                             }}
-                            style={{ width: 24, height: 24, flexDirection: 'row', }}
+                            style={{ width: 24, height: 24, flexDirection: 'row', alignSelf: 'flex-end', marginRight: 10, }}
                         >
                             <MaterialCommunityIcons name={drawerType === 'slide' ? 'view-column' : 'dock-right'} size={24} color="#007AFF" />
                         </TouchableOpacity>
 
                         <ScrollView>
                             <OMR
-                                numQuestions={10}
+                                numQuestions={Object.keys(answers).length}
                                 optionsPerQuestion={['1', '2', '3', '4', '5']}
                                 selectedAnswers={selectedAnswers}
                                 setSelectedAnswers={setSelectedAnswers}
@@ -197,13 +198,13 @@ export default function App() {
                             onPress={() => showDialog("OMR을 교체합니다.", () => { setSelectedAnswers([]) })}
                             style={{ padding: 5, width: 225 }}
                         >
-                            <Text style={{ color: '#007AFF', textAlign: 'center' }}>OMR 교체</Text>
+                            <Text style={{ color: '#007AFF', textAlign: 'center', marginTop: 25, }}>OMR 교체</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             onPress={() => showDialog("채점을 진행 합니다.", handleGrading)}
                             style={{ padding: 5, width: 225 }}
                         >
-                            <Text style={{ color: '#007AFF', textAlign: 'center' }}>제출 및 채점</Text>
+                            <Text style={{ color: '#007AFF', textAlign: 'center', marginBottom: 25, }}>제출 및 채점</Text>
                         </TouchableOpacity>
                     </View>
                 }
@@ -296,99 +297,99 @@ const ToolButtons = ({
 
 // Styles
 const styles = StyleSheet.create({
-    pageMain: {
-        flex: 1,
-        width: '100%',
-    },
-    container: {
-        flex: 1,
-        width: '100%',
-    },
-    toolbarSection: {
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: 8,
-        width: '100%',
-        backgroundColor: '#FFE560',
-        paddingTop: Platform.OS === 'ios' ? 24 : 0,
-    },
-    tbGroup1: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'baseline',
-        width: '100%',
-        height: 48,
-    },
-    tbGroup2: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        width: '100%',
-        height: 40,
-        paddingHorizontal: 8,
-        backgroundColor: '#FFF1A8',
-    },
-    tbGrooup1Child: {
-        flexDirection: 'row',
-    },
+  pageMain: {
+    flex: 1,
+    width: '100%',
+  },
+  container: {
+    flex: 1,
+    width: '100%',
+  },
+  toolbarSection: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 8,
+    width: '100%',
+    backgroundColor: '#FFE560',
+    paddingTop: Platform.OS === 'ios' ? 24 : 0,
+  },
+  tbGroup1: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    width: '100%',
+    height: 48,
+  },
+  tbGroup2: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    height: 40,
+    paddingHorizontal: 8,
+    backgroundColor: '#FFF1A8',
+  },
+  tbGrooup1Child: {
+    flexDirection: 'row',
+  },
 
-    functionToolGroup: {
-        flexDirection: 'row',
-        justifyContent: 'flex-start',
-        alignItems: 'center',
-        gap: 6,
-        flex: 1
-    },
-    drawingToolGroup: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: 0,
-        flex: 1
-    },
-    eraserToolGroup: {
-        flexDirection: 'row',
-        justifyContent: 'flex-end',
-        alignItems: 'center',
-        gap: 6,
-        flex: 1
-    },
+  functionToolGroup: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1
+  },
+  drawingToolGroup: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 0,
+    flex: 1
+  },
+  eraserToolGroup: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1
+  },
 
-    button: {
-        paddingVertical: 6,
-        paddingHorizontal: 10,
-        borderRadius: 4,
-    },
-    defaultButton: {
-        backgroundColor: '#000000',
-        paddingHorizontal: 6,
-        paddingVertical: 3,
-        color: '#ffffff',
-    },
+  button: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 4,
+  },
+  defaultButton: {
+    backgroundColor: '#000000',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    color: '#ffffff',
+  },
 
 
-    canvasWrapper: {
-        flex: 1,
-        backgroundColor: '#ffffff',
-    },
-    canvas: {
-        flex: 1,
-    },
-    previewImage: {
-        borderWidth: 1,
-        borderColor: '#2224',
-        borderRadius: 12,
-        position: 'absolute',
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'white',
-        width: 160,
-        height: 160,
-    },
+  canvasWrapper: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  canvas: {
+    flex: 1,
+  },
+  previewImage: {
+    borderWidth: 1,
+    borderColor: '#2224',
+    borderRadius: 12,
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'white',
+    width: 160,
+    height: 160,
+  },
 
-    slideoverPanel: {
-        flexDirection: 'column',
-        width: 250,
-        borderLeftWidth: 1,
-        borderTopLeftRadius: 25, borderBottomLeftRadius: 25,
-    },
+  slideoverPanel: {
+    flexDirection: 'column',
+    width: 250,
+    borderLeftWidth: 1,
+    borderTopLeftRadius: 25, borderBottomLeftRadius: 25,
+  },
 });
