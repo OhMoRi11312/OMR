@@ -1,5 +1,5 @@
 import { DocumentDirectoryPath } from '@dr.pogodin/react-native-fs';
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import 'react-native-gesture-handler';
 import { ScrollView } from 'react-native-gesture-handler';
@@ -20,10 +20,18 @@ const allPens: { label: string; value: string; icon: string; }[] = [
 ];
 
 const allErasers: { label: string; value: string; icon: string; }[] = [
-    { label: '비트맵 지우개', value: 'eraserBitmap', icon: '' },
-    { label: '벡터 지우개', value: 'eraserVector', icon: '' },
+    { label: '정밀 지우개', value: 'eraserBitmap', icon: '' },
+    { label: '도형 지우개', value: 'eraserVector', icon: '' },
     { label: '고정폭 지우개', value: 'eraserFixedWidthBitmap', icon: '' },
 ];
+
+const choiceMap: Record<string, string> = {
+    '①': '1',
+    '②': '2',
+    '③': '3',
+    '④': '4',
+    '⑤': '5',
+};
 
 
 export default function App() {
@@ -39,6 +47,59 @@ export default function App() {
     const [dialogMessage, setDialogMessage] = useState('');
     const [functionToDo, setFunctionToDo] = useState<() => void>(() => () => { });
 
+    useEffect(() => {
+        const raw = `
+          1 ②
+          6 ③
+          2 ④
+          7 ②
+          3 ④
+          8 ⑤
+          4 ②
+          9 ①
+          5 ③
+          10 ⑤
+          11 ④
+          16 ①
+          21 ①
+          26 ①
+          31 ①
+          12 ⑤
+          17 ⑤
+          22 ①
+          27 ④
+          32 ①
+          13 ③
+          18 ④
+          23 ③
+          28 ①
+          33 ⑤
+          14 ②
+          19 ②
+          24 ④
+          29 ①
+          34 ②
+          15 ①
+          20 ⑤
+          25 ⑤
+          30 ④
+        `;
+
+        const parsed: { [key: number]: string } = {};
+        const regex = /(\d+)\s([①-⑤])/g;  // 정규식 -> 
+        let match;
+
+        while ((match = regex.exec(raw)) !== null) {
+            const number = parseInt(match[1], 10);
+            const answer = choiceMap[match[2]]; // 숫자로 변환
+            parsed[number] = answer;
+        }
+
+
+        console.log(parsed)
+        setAnswers(parsed);
+    }, []);
+
     function showDialog(message: string, action: () => void) {
         setDialogMessage(message);
         setFunctionToDo(() => action);
@@ -46,25 +107,22 @@ export default function App() {
     }
 
     function handleGrading() {
-
-        const answerKey = {
-            0: ['3'],
-            1: ['2'],
-            // ...
-        }
-
+        const answerKey = answers;
         let correct = 0;
-        Object.entries(answerKey).forEach(([qIndex, correctAnswer]) => {
-            const selected = selectedAnswers[+qIndex] || []
-            if (
-                correctAnswer.length === selected.length &&
-                correctAnswer.every((val, i) => selected[i] === val)
-            ) {
-                correct += 1
-            }
-        })
 
-        alert(`정답 수: ${correct}개`)
+        Object.entries(answerKey).forEach(([qIndex, correctAnswer]) => {
+            const selected = selectedAnswers[+qIndex - 1] || [];
+            console.log(`문항 ${qIndex}: 정답=${correctAnswer}, 선택=${selected}`);
+
+            if (
+                selected.length === 1 &&
+                selected[0] === correctAnswer
+            ) {
+                correct += 1;
+            }
+        });
+
+        alert(`정답 수: ${correct}개`);
     }
 
     return (
