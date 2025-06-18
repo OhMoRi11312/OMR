@@ -1,12 +1,15 @@
 import { DocumentDirectoryPath } from '@dr.pogodin/react-native-fs';
 import { useEffect, useRef, useState } from 'react';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import BlobUtil from 'react-native-blob-util';
+import DocumentPicker from 'react-native-document-picker';
 import 'react-native-gesture-handler';
 import { ScrollView } from 'react-native-gesture-handler';
 import PencilKitView, { type PencilKitRef, type PencilKitTool, } from 'react-native-pencil-kit';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import ConfirmDialog from '../components/ConfirmDialog';
 import OMR from '../components/OMR';
+import PdfViewerScreen from '../components/PdfViewerScreen';
 import SlideOver from '../components/SlideOverPanel';
 
 const allPens: { label: string; value: string; icon: string; }[] = [
@@ -20,8 +23,6 @@ const allPens: { label: string; value: string; icon: string; }[] = [
     { label: '비트맵 지우개', value: 'eraserBitmap', icon: 'eraser' },
     { label: '벡터 지우개', value: 'eraserVector', icon: 'eraser-variant' },
 ];
-
-
 
 export default function App() {
     const ref = useRef<PencilKitRef>(null);
@@ -37,7 +38,30 @@ export default function App() {
     const [dialogMessage, setDialogMessage] = useState('');
     const [functionToDo, setFunctionToDo] = useState<() => void>(() => { });
     const [questions, setQuestions] = useState<{ [key: number]: { answer: string; type: string } }>({});
+    const [base64Pdf, setBase64Pdf] = useState<string | null>(null);
+    const [webViewReady, setWebViewReady] = useState(false);
 
+    const pickPdf = async () => {
+        try {
+            const res = await DocumentPicker.pickSingle({
+                type: [DocumentPicker.types.pdf],
+                copyTo: 'cachesDirectory',
+            });
+
+            let uri = decodeURIComponent(res.fileCopyUri || res.uri);
+            if (uri.startsWith('file://')) {
+                uri = uri.replace('file://', '');
+            }
+
+            const exists = await BlobUtil.fs.exists(uri);
+            if (!exists) throw new Error('파일이 존재하지 않음');
+
+            const base64 = await BlobUtil.fs.readFile(uri, 'base64');
+            setBase64Pdf(base64);
+        } catch (err) {
+            console.error('PDF 선택 실패', err);
+        }
+    };
 
     useEffect(() => {
         const raw = `
@@ -164,6 +188,11 @@ export default function App() {
                     </View>
                     <View style={styles.optionBtnGroup}>
                         <Btn
+                            text="PDF 열기"
+                            onPress={pickPdf}
+                            variant={2}
+                        />
+                        <Btn
                             text={isMemoOn ? '메모 끄기' : '메모 켜기'}
                             on={isMemoOn}
                             onPress={() => setMemoStatus(!isMemoOn)}
@@ -219,21 +248,42 @@ export default function App() {
                     </View>
                 }
                 mainContent={
-                    < View style={styles.canvasWrapper} >
+                    <View style={{ flex: 1 }}>
+                        {/* 겹쳐지는 구조 */}
+                        <View style={{ flex: 1 }}>
+                            <PdfViewerScreen
+                                base64Pdf={base64Pdf}
+                                webViewReady={webViewReady}
+                                setWebViewReady={setWebViewReady}
+                            />
+                        </View>
+
+                        {/*<PencilKitView*/}
+                        {/*  ref={ref}*/}
+                        {/*  style={{*/}
+                        {/*    position: 'absolute',*/}
+                        {/*    top: 0,*/}
+                        {/*    left: 0,*/}
+                        {/*    right: 0,*/}
+                        {/*    bottom: 0,*/}
+                        {/*    backgroundColor: 'transparent',*/}
+                        {/*  }}*/}
+                        {/*  backgroundColor="transparent"*/}
+                        {/*  isOpaque={false}*/}
+                        {/*/>*/}
                         <PencilKitView
                             ref={ref}
-                            style={styles.canvas}
-                            alwaysBounceVertical={false}
-                            alwaysBounceHorizontal={false}
-                            backgroundColor={'#f0ebc0'}
+                            style={[{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                backgroundColor: 'rgba(0,0,0,0)',
+                            }, (isMemoOn ? {} : { display: 'none', })]}
+                            backgroundColor="transparent"
+                            isOpaque={false}
                         />
-                        {
-                            imageBase64 ? (
-                                <Image
-                                    style={styles.previewImage}
-                                    source={{ uri: imageBase64 }}
-                                />
-                            ) : null}
                     </View>
                 }
             />
@@ -388,21 +438,26 @@ const styles = StyleSheet.create({
 
     canvasWrapper: {
         flex: 1,
-        backgroundColor: '#ffffff',
+        position: 'relative', // 자식들 position:absolute 쓸 수 있도록
     },
     canvas: {
         flex: 1,
     },
     previewImage: {
-        borderWidth: 1,
-        borderColor: '#2224',
-        borderRadius: 12,
         position: 'absolute',
-        right: 0,
-        bottom: 0,
+        right: 16,
+        bottom: 16,
+        width: 120,
+        height: 120,
+        borderRadius: 8,
         backgroundColor: 'white',
-        width: 160,
-        height: 160,
+        borderColor: '#ccc',
+        borderWidth: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 5, // Android 그림자
     },
 
     slideoverPanel: {
